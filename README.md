@@ -1,6 +1,6 @@
-# Webapp Template
+# Roots Template
 
-A production-ready Next.js 16 template by **Ravix Studio** with built-in authentication, state management, API layer, and a curated component library.
+A production-ready Next.js 16 admin dashboard template by **Ravix Studio** with built-in authentication, role-based access control, data tables with pagination, and a curated component library.
 
 ---
 
@@ -15,9 +15,23 @@ A production-ready Next.js 16 template by **Ravix Studio** with built-in authent
 | **Icons**            | [Hugeicons](https://hugeicons.com)                                                    |
 | **State Management** | [Zustand](https://zustand-demo.pmnd.rs)                                               |
 | **Data Fetching**    | [TanStack Query](https://tanstack.com/query)                                          |
+| **Data Tables**      | [TanStack Table](https://tanstack.com/table)                                          |
 | **HTTP Client**      | [Axios](https://axios-http.com)                                                       |
 | **Validation**       | [Zod](https://zod.dev)                                                                |
 | **Package Manager**  | [Bun](https://bun.sh)                                                                 |
+
+---
+
+## Features
+
+- 🔐 **Authentication** - Google OAuth with HTTP-only cookie sessions
+- 👥 **Role-Based Access Control** - Admin/User roles with protected routes
+- 📊 **Data Tables** - TanStack Table with server-side pagination
+- 🎨 **Modern UI** - shadcn/ui components with Base UI primitives
+- 📱 **Responsive Sidebar** - Collapsible navigation with keyboard shortcuts
+- 🌙 **Dark Mode Ready** - CSS variables with OKLCH color space
+- ⚡ **Type-Safe** - End-to-end TypeScript with Zod validation
+- 🏗️ **Modular Architecture** - Feature-based module structure
 
 ---
 
@@ -25,56 +39,69 @@ A production-ready Next.js 16 template by **Ravix Studio** with built-in authent
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout with providers
-│   ├── page.tsx            # Home page
-│   ├── providers.tsx       # Client-side providers (React Query, Auth)
-│   ├── globals.css         # Global styles & CSS variables
-│   └── login/              # Login route
-│       └── page.tsx
+├── app/                        # Next.js App Router
+│   ├── (private)/              # Protected routes (requires auth + admin role)
+│   │   ├── layout.tsx          # Private layout with sidebar
+│   │   ├── dashboard/
+│   │   │   └── page.tsx
+│   │   └── users/
+│   │       └── page.tsx
+│   ├── login/
+│   │   └── page.tsx
+│   ├── layout.tsx              # Root layout with providers
+│   ├── page.tsx                # Landing page
+│   ├── providers.tsx           # Client-side providers
+│   └── globals.css             # Global styles & CSS variables
 │
-├── assets/                 # Static assets (images, fonts, etc.)
+├── assets/                     # Static assets (images, fonts)
 │
 ├── components/
-│   └── ui/                 # Reusable UI components (shadcn-based)
+│   ├── navigation/
+│   │   └── app-sidebar.tsx     # Main sidebar component
+│   └── ui/                     # Reusable UI components (shadcn-based)
 │       ├── button.tsx
-│       ├── input.tsx
-│       ├── card.tsx
-│       ├── select.tsx
+│       ├── table.tsx
+│       ├── pagination.tsx
+│       ├── sidebar.tsx
 │       └── ...
 │
 ├── config/
-│   ├── index.ts            # Config barrel export
-│   ├── endpoints.ts        # API endpoint definitions
-│   └── env.ts              # Environment variable schema (Zod validated)
+│   ├── index.ts                # Config barrel export
+│   ├── endpoints.ts            # API endpoint definitions
+│   └── env.ts                  # Environment variable schema (Zod)
+│
+├── hooks/
+│   └── use-mobile.tsx          # Mobile detection hook
 │
 ├── lib/
-│   ├── api.ts              # Axios instance & API types
-│   └── utils.ts            # Utility functions (cn, etc.)
+│   ├── api.ts                  # Axios instance & API types
+│   └── utils.ts                # Utility functions (cn, getInitials)
 │
-├── modules/                # Feature modules (domain-driven)
+├── modules/                    # Feature modules (domain-driven)
 │   ├── auth/
 │   │   └── pages/
-│   │       └── login.tsx   # Login page component
-│   └── landing/
+│   │       └── login.tsx
+│   └── users/
+│       ├── components/
+│       │   └── users-list-table.tsx
 │       └── pages/
-│           └── landing.tsx # Landing page component
+│           └── users.tsx
 │
 ├── providers/
-│   └── auth-provider.tsx   # Authentication context provider
+│   └── auth-provider.tsx       # Authentication context provider
 │
 ├── services/
-│   ├── index.ts            # Services barrel export
-│   └── auth/
-│       └── auth-services.ts # Auth API calls
+│   ├── index.ts                # Services barrel export
+│   ├── auth-services.ts        # Auth API calls
+│   └── user-services.ts        # User API calls
 │
 ├── store/
-│   ├── index.ts            # Store barrel export
-│   └── user-store.ts       # User state (Zustand)
+│   ├── index.ts                # Store barrel export
+│   └── user-store.ts           # User state (Zustand)
 │
 └── types/
-    ├── index.ts            # Types barrel export
-    └── user-types.ts       # User type definitions
+    ├── index.ts                # Types barrel export
+    └── user-types.ts           # User type definitions
 ```
 
 ---
@@ -164,6 +191,12 @@ export const endpoints = {
       endpoint: "/v1/auth/logout",
     },
   },
+  users: {
+    getAll: {
+      query: "getAllUsers",
+      endpoint: "/v1/users",
+    },
+  },
 };
 ```
 
@@ -174,11 +207,27 @@ Each endpoint object contains:
 
 ---
 
-## Authentication
+## Authentication & Authorization
 
-The template includes a complete authentication flow:
+### User Roles
 
-### Flow Overview
+```typescript
+// src/types/user-types.ts
+export enum UserRole {
+  ADMIN = "admin",
+  USER = "user",
+}
+
+export type User = {
+  email: string;
+  firstName: string;
+  lastName?: string;
+  role: UserRole;
+  avatar?: string;
+};
+```
+
+### Authentication Flow
 
 1. **Landing Page** → Checks if user is logged in via `AuthProvider`
 2. **Login Page** → Initiates Google OAuth flow
@@ -192,7 +241,7 @@ Located at `src/providers/auth-provider.tsx`:
 
 ```typescript
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser } = useUserStore();
+  const { setUser, setIsLoading } = useUserStore();
 
   const { data } = useQuery({
     queryKey: [endpoints.auth.me.query],
@@ -203,9 +252,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data?.data.payload.user.email) {
       setUser(data?.data.payload.user);
     }
+    setIsLoading(false);
   }, [data?.data.payload.user]);
 
   return <>{children}</>;
+}
+```
+
+### Protected Routes
+
+The `(private)` route group requires authentication and admin role:
+
+```typescript
+// src/app/(private)/layout.tsx
+export default function PrivateLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useUserStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if ((!user && !isLoading) || (user && user.role !== UserRole.ADMIN)) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <main className="flex-1 flex flex-col min-h-svh">
+        <header>...</header>
+        <div className="flex-1 p-6">{children}</div>
+      </main>
+    </SidebarProvider>
+  );
 }
 ```
 
@@ -219,27 +297,146 @@ import { User } from "@/types";
 
 export const useUserStore = create<{
   user: User | null;
+  isLoading: boolean;
   setUser: (user: User | null) => void;
+  setIsLoading: (isLoading: boolean) => void;
 }>((set) => ({
   user: null,
-  setUser: (user: User) => set({ user }),
+  isLoading: true,
+  setUser: (user) => set({ user }),
+  setIsLoading: (isLoading) => set({ isLoading }),
 }));
 ```
 
-### Usage in Components
+---
+
+## Data Tables
+
+The template includes TanStack Table with server-side pagination.
+
+### Basic Table with Pagination
 
 ```typescript
-import { useUserStore } from "@/store";
+// src/modules/users/components/users-list-table.tsx
+import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
-function MyComponent() {
-  const { user, setUser } = useUserStore();
-
-  if (user) {
-    return <p>Welcome, {user.firstName}!</p>;
-  }
-
-  return <p>Please log in</p>;
+interface UsersListTableProps {
+  users: User[];
+  pagination?: PaginationData;
+  onPageChange?: (page: number) => void;
 }
+
+export function UsersListTable({ users, pagination, onPageChange }: UsersListTableProps) {
+  const table = useReactTable({
+    data: users,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-md border">
+        <Table>...</Table>
+      </div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-muted-foreground text-sm">
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+          </p>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious onClick={() => onPageChange?.(pagination.page - 1)} />
+              </PaginationItem>
+              {/* Page numbers with ellipsis */}
+              <PaginationItem>
+                <PaginationNext onClick={() => onPageChange?.(pagination.page + 1)} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Using with React Query
+
+```typescript
+// src/modules/users/pages/users.tsx
+const PAGE_SIZE = 10;
+
+export function UsersPage() {
+  const [page, setPage] = useState(1);
+
+  const { data } = useQuery({
+    queryKey: [endpoints.users.getAll.query, page],
+    queryFn: () => UserServices.getAllUsers({ page, limit: PAGE_SIZE }),
+  });
+
+  return (
+    <UsersListTable
+      users={data?.data.payload.users || []}
+      pagination={data?.data.payload.pagination}
+      onPageChange={setPage}
+    />
+  );
+}
+```
+
+---
+
+## Sidebar Navigation
+
+The template includes a collapsible sidebar with:
+
+- Brand header
+- Navigation groups with active state
+- User dropdown with logout
+- Keyboard shortcut (⌘B) to toggle
+
+### Adding Navigation Items
+
+```typescript
+// src/components/navigation/app-sidebar.tsx
+const mainNavItems = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: HomeIcon,
+  },
+  {
+    title: "Users",
+    href: "/users",
+    icon: People,
+  },
+];
+
+const settingsNavItems = [
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings01Icon,
+  },
+];
 ```
 
 ---
@@ -259,6 +456,13 @@ export interface APIResponse<T> {
   payload: T;
 }
 
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export const api = axios.create({
   baseURL: env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true, // Required for HTTP-only cookies
@@ -267,49 +471,22 @@ export const api = axios.create({
 
 ### Creating Services
 
-Services are organized by domain in `src/services/`. Example:
+Services are organized by domain in `src/services/`:
 
 ```typescript
-// src/services/auth/auth-services.ts
-import { api, APIResponse } from "@/lib/api";
-import { endpoints } from "@/config/endpoints";
+// src/services/user-services.ts
+import { api, APIResponse, Pagination } from "@/lib/api";
+import { endpoints } from "@/config";
+import { User } from "@/types";
 
-export namespace AuthServices {
-  export function getGoogleAuthUrl() {
-    return api.get<APIResponse<{ link: string }>>(endpoints.auth.google.endpoint);
-  }
-
-  export function getMe() {
-    return api.get<APIResponse<{ user: User }>>(endpoints.auth.me.endpoint);
-  }
-
-  export function logout() {
-    return api.get<APIResponse<null>>(endpoints.auth.logout.endpoint);
+export namespace UserServices {
+  export function getAllUsers({ page, limit }: { page: number; limit: number }) {
+    return api.get<APIResponse<{ users: User[]; pagination: Pagination }>>(
+      endpoints.users.getAll.endpoint,
+      { params: { page, limit } },
+    );
   }
 }
-```
-
-### Using with TanStack Query
-
-```typescript
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { AuthServices } from "@/services";
-import { endpoints } from "@/config";
-
-// Query example
-const { data, isLoading } = useQuery({
-  queryKey: [endpoints.auth.me.query],
-  queryFn: AuthServices.getMe,
-});
-
-// Mutation example
-const loginMutation = useMutation({
-  mutationKey: [endpoints.auth.google.query],
-  mutationFn: AuthServices.getGoogleAuthUrl,
-  onSuccess: (data) => {
-    window.location.assign(data.data.payload.link);
-  },
-});
 ```
 
 ---
@@ -318,19 +495,38 @@ const loginMutation = useMutation({
 
 Your backend API should implement these endpoints:
 
+### Authentication
+
 | Method | Endpoint           | Request     | Response                                 |
 | ------ | ------------------ | ----------- | ---------------------------------------- |
 | `GET`  | `/v1/oauth/google` | -           | `{ message, payload: { link: string } }` |
 | `GET`  | `/v1/auth/me`      | Cookie auth | `{ message, payload: { user: User } }`   |
 | `GET`  | `/v1/auth/logout`  | Cookie auth | `{ message, payload: null }`             |
 
-### Expected User Type
+### Users
+
+| Method | Endpoint    | Query Params    | Response                                                          |
+| ------ | ----------- | --------------- | ----------------------------------------------------------------- |
+| `GET`  | `/v1/users` | `page`, `limit` | `{ message, payload: { users: User[], pagination: Pagination } }` |
+
+### Expected Types
 
 ```typescript
+// User
 type User = {
   email: string;
   firstName: string;
   lastName?: string;
+  role: "admin" | "user";
+  avatar?: string;
+};
+
+// Pagination
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
 ```
 
@@ -342,22 +538,24 @@ The template uses [shadcn/ui](https://ui.shadcn.com) with the **base-lyra** styl
 
 ### Available Components
 
-| Component      | File                | Description                                                                 |
-| -------------- | ------------------- | --------------------------------------------------------------------------- |
-| `Button`       | `button.tsx`        | Primary action button with variants, sizes, loading state, and icon support |
-| `Input`        | `input.tsx`         | Text input field                                                            |
-| `Textarea`     | `textarea.tsx`      | Multi-line text input                                                       |
-| `Select`       | `select.tsx`        | Dropdown select                                                             |
-| `Combobox`     | `combobox.tsx`      | Searchable select                                                           |
-| `Card`         | `card.tsx`          | Content container                                                           |
-| `Badge`        | `badge.tsx`         | Status/label badge                                                          |
-| `Label`        | `label.tsx`         | Form label                                                                  |
-| `Field`        | `field.tsx`         | Form field wrapper                                                          |
-| `InputGroup`   | `input-group.tsx`   | Input with addons                                                           |
-| `Separator`    | `separator.tsx`     | Visual divider                                                              |
-| `Spinner`      | `spinner.tsx`       | Loading indicator                                                           |
-| `AlertDialog`  | `alert-dialog.tsx`  | Confirmation dialog                                                         |
-| `DropdownMenu` | `dropdown-menu.tsx` | Action menu                                                                 |
+| Component      | File                | Description                         |
+| -------------- | ------------------- | ----------------------------------- |
+| `Button`       | `button.tsx`        | Action button with variants & icons |
+| `Input`        | `input.tsx`         | Text input field                    |
+| `Textarea`     | `textarea.tsx`      | Multi-line text input               |
+| `Select`       | `select.tsx`        | Dropdown select                     |
+| `Combobox`     | `combobox.tsx`      | Searchable select                   |
+| `Table`        | `table.tsx`         | Data table components               |
+| `Pagination`   | `pagination.tsx`    | Pagination controls                 |
+| `Sidebar`      | `sidebar.tsx`       | Collapsible sidebar                 |
+| `Card`         | `card.tsx`          | Content container                   |
+| `Badge`        | `badge.tsx`         | Status/label badge                  |
+| `Avatar`       | `avatar.tsx`        | User avatar with fallback           |
+| `DropdownMenu` | `dropdown-menu.tsx` | Action menu                         |
+| `AlertDialog`  | `alert-dialog.tsx`  | Confirmation dialog                 |
+| `Tooltip`      | `tooltip.tsx`       | Hover tooltip                       |
+| `Skeleton`     | `skeleton.tsx`      | Loading placeholder                 |
+| `Spinner`      | `spinner.tsx`       | Loading indicator                   |
 
 ### Button Example
 
@@ -424,17 +622,18 @@ Colors are defined in `src/app/globals.css` using OKLCH color space:
 
 ### Utility Functions
 
-The `cn()` utility combines `clsx` and `tailwind-merge`:
-
 ```typescript
 import { cn } from "@/lib/utils";
 
+// Combine classes conditionally
 <div className={cn("base-classes", isActive && "active-classes", className)} />;
+
+// Get user initials
+import { getInitials } from "@/lib/utils";
+getInitials("John", "Doe"); // "JD"
 ```
 
 ### Fonts
-
-The template includes:
 
 - **JetBrains Mono** - Primary sans font (`--font-sans`)
 - **Geist Sans** - Secondary sans (`--font-geist-sans`)
@@ -450,94 +649,67 @@ The template includes:
 
 ```
 src/modules/
-└── dashboard/
+└── products/
     ├── pages/
-    │   └── dashboard.tsx
+    │   └── products.tsx
     ├── components/
-    │   └── stats-card.tsx
+    │   └── products-table.tsx
     └── hooks/
-        └── use-dashboard-data.ts
-```
-
-2. **Create the page component:**
-
-```tsx
-// src/modules/dashboard/pages/dashboard.tsx
-"use client";
-
-export function DashboardPage() {
-  return (
-    <main>
-      <h1>Dashboard</h1>
-    </main>
-  );
-}
-```
-
-3. **Add the route:**
-
-```tsx
-// src/app/dashboard/page.tsx
-import { DashboardPage } from "@/modules/dashboard/pages/dashboard";
-
-export default function Page() {
-  return <DashboardPage />;
-}
-```
-
----
-
-## Adding New API Services
-
-1. **Define endpoints:**
-
-```typescript
-// src/config/endpoints.ts
-export const endpoints = {
-  // ... existing
-  posts: {
-    list: {
-      query: "postsList",
-      endpoint: "/v1/posts",
-    },
-    create: {
-      query: "postsCreate",
-      endpoint: "/v1/posts",
-    },
-  },
-};
+        └── use-products.ts
 ```
 
 2. **Create the service:**
 
 ```typescript
-// src/services/posts/posts-services.ts
-import { api, APIResponse } from "@/lib/api";
-import { endpoints } from "@/config/endpoints";
-
-export type Post = {
-  id: string;
-  title: string;
-  content: string;
-};
-
-export namespace PostsServices {
-  export function list() {
-    return api.get<APIResponse<{ posts: Post[] }>>(endpoints.posts.list.endpoint);
-  }
-
-  export function create(data: { title: string; content: string }) {
-    return api.post<APIResponse<{ post: Post }>>(endpoints.posts.create.endpoint, data);
+// src/services/product-services.ts
+export namespace ProductServices {
+  export function getAll({ page, limit }: { page: number; limit: number }) {
+    return api.get<APIResponse<{ products: Product[]; pagination: Pagination }>>(
+      endpoints.products.getAll.endpoint,
+      { params: { page, limit } },
+    );
   }
 }
 ```
 
-3. **Export from barrel:**
+3. **Add endpoints:**
 
 ```typescript
-// src/services/index.ts
-export * from "./auth/auth-services";
-export * from "./posts/posts-services";
+// src/config/endpoints.ts
+export const endpoints = {
+  // ... existing
+  products: {
+    getAll: {
+      query: "getAllProducts",
+      endpoint: "/v1/products",
+    },
+  },
+};
+```
+
+4. **Add the route:**
+
+```tsx
+// src/app/(private)/products/page.tsx
+import { ProductsPage } from "@/modules/products/pages/products";
+
+export default function Page() {
+  return <ProductsPage />;
+}
+```
+
+5. **Add to sidebar:**
+
+```typescript
+// src/components/navigation/app-sidebar.tsx
+const mainNavItems = [
+  // ... existing
+  {
+    title: "Products",
+    href: "/products",
+    icon: ShoppingCartIcon,
+  },
+];
 ```
 
 ---
@@ -594,6 +766,8 @@ CMD ["bun", "server.js"]
 - Use Zod for runtime validation
 - Leverage TanStack Query for server state
 - Use Zustand for client state
+- Use TanStack Table for data tables
+- Include pagination for list endpoints
 
 ### ❌ Avoid
 
@@ -601,6 +775,7 @@ CMD ["bun", "server.js"]
 - Hardcoding API URLs
 - Storing sensitive data in client state
 - Skipping TypeScript types
+- Client-side pagination for large datasets
 
 ---
 
