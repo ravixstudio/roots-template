@@ -13,4 +13,10 @@ export const endpoints = {
       endpoint: "/v1/auth/logout",
     },
   },
+  users: {
+    getAll: {
+      query: "getAllUsers",
+      endpoint: "/v1/users",
+    },
+  },
 };
