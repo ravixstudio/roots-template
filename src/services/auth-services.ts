@@ -7,6 +7,10 @@ export namespace AuthServices {
     return api.get<APIResponse<{ link: string }>>(endpoints.auth.google.endpoint);
   }
 
+  export function getAppleAuthUrl() {
+    return api.get<APIResponse<{ link: string }>>(endpoints.auth.apple.endpoint);
+  }
+
   export function getMe() {
     return api.get<APIResponse<{ user: User }>>(endpoints.auth.me.endpoint);
   }

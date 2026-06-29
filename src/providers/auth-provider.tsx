@@ -11,6 +11,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data, isLoading } = useQuery({
     queryKey: [endpoints.auth.me.query],
     queryFn: AuthServices.getMe,
+    retry: false,
   });
 
   useEffect(() => {

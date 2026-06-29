@@ -4,6 +4,10 @@ export const endpoints = {
       query: "googleOauth",
       endpoint: "/v1/oauth/google",
     },
+    apple: {
+      query: "appleOauth",
+      endpoint: "/v1/oauth/apple",
+    },
     me: {
       query: "me",
       endpoint: "/v1/auth/me",
